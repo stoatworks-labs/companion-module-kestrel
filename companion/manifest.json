@@ -1,0 +1,36 @@
+{
+  "$schema": "../node_modules/@companion-module/base/assets/manifest.schema.json",
+  "type": "connection",
+  "id": "kestrel",
+  "name": "kestrel",
+  "shortname": "kestrel",
+  "description": "Route regions of interest to DeckLink outputs from a control surface — take any region to any output, cycle regions on an output, fire a salvo, kill every output at once, with live crosspoint tally and a scale-percentage readout that warns when an output is blowing its region up too far.",
+  "version": "1.0.0",
+  "license": "MIT",
+  "repository": "git+https://github.com/stoatworks-labs/companion-module-kestrel.git",
+  "bugs": "https://github.com/stoatworks-labs/companion-module-kestrel/issues",
+  "maintainers": [
+    {
+      "name": "Allan Sargeant",
+      "email": ""
+    }
+  ],
+  "runtime": {
+    "type": "node22",
+    "api": "nodejs-ipc",
+    "apiVersion": "0.0.0",
+    "entrypoint": "../src/main.js"
+  },
+  "legacyIds": [],
+  "manufacturer": "Stoatworks Labs",
+  "products": ["kestrel"],
+  "keywords": [
+    "decklink",
+    "sdi",
+    "roi",
+    "crop",
+    "router",
+    "crosspoint",
+    "video"
+  ]
+}
