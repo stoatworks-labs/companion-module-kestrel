@@ -7,6 +7,7 @@ import UpdateVariableDefinitions, {
 } from "./variables.js";
 import UpdatePresets from "./presets.js";
 import { socket } from "./api.js";
+import { aboutField } from './about-field.js'
 
 /** Companion variable ids allow only `[a-zA-Z0-9_]`. Kestrel's ids are plain
  *  integers, so this is belt and braces rather than load-bearing — but it costs
@@ -96,6 +97,10 @@ export default class ModuleInstance extends InstanceBase {
         max: 2000,
         default: 200,
       },
+    
+    	// Vendored from stoatworks-backend/about. A Companion module has no
+    	// UI of its own, so this config panel is the only surface it has.
+    	aboutField(),
     ];
   }
 
