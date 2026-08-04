@@ -72,3 +72,7 @@ restores whatever routing it found, so it is safe on a configured machine and
 **not** on one that is on air.
 
 MIT.
+
+<!-- attributions:start -->
+This project is built on other people's work — see [ATTRIBUTIONS.md](ATTRIBUTIONS.md).
+<!-- attributions:end -->
