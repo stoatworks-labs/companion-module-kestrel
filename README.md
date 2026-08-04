@@ -1,5 +1,11 @@
 # companion-module-kestrel
 
+> **AI-assisted project.** This codebase was created with [Claude](https://claude.com/claude-code)
+> (Anthropic), directed and reviewed by a human author. Its 21 automated checks
+> run against a fake Kestrel, so they prove the module's own shape rather than
+> that the two ends agree; the live test against a really-running Kestrel is the
+> one that matters when either side changes.
+
 A [Bitfocus Companion](https://bitfocus.io/companion) module for
 [Kestrel](https://github.com/stoatworks-labs/kestrel) — take any region of
 interest to any DeckLink output from a control surface, with live tally.
