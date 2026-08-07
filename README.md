@@ -10,6 +10,21 @@ A [Bitfocus Companion](https://bitfocus.io/companion) module for
 [Kestrel](https://github.com/stoatworks-labs/kestrel) — take any region of
 interest to any DeckLink output from a control surface, with live tally.
 
+<!-- downloads:start -->
+
+## Download
+
+**[v1.0.0](https://github.com/stoatworks-labs/companion-module-kestrel/releases/tag/v1.0.0)**
+
+This release contains:
+
+- [`companion-module-kestrel-pkg.tgz`](https://github.com/stoatworks-labs/companion-module-kestrel/releases/latest/download/companion-module-kestrel-pkg.tgz) — npm package, 23 KB
+- [`kestrel-1.0.0.tgz`](https://github.com/stoatworks-labs/companion-module-kestrel/releases/download/v1.0.0/kestrel-1.0.0.tgz) — npm package, 22 KB
+
+All builds, checksums and release notes: [github.com/stoatworks-labs/companion-module-kestrel/releases](https://github.com/stoatworks-labs/companion-module-kestrel/releases).
+
+<!-- downloads:end -->
+
 ## Setup
 
 Point it at Kestrel's control API — the address along the bottom of Kestrel's
