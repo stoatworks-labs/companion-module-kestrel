@@ -1,6 +1,16 @@
 import { combineRgb } from "@companion-module/base";
 import { safeId } from "./main.js";
 
+/**
+ * The preset library.
+ *
+ * Note `setPresetDefinitions` takes TWO arguments in base 2.x — a structure of
+ * sections and groups, then a flat object of definitions keyed by id. Grouping
+ * comes from that structure. A 1.x-style `category` field on a definition still
+ * loads, and the presets simply never appear, which reads as a rendering bug
+ * rather than a mistake. `type` is `'simple'` in 2.x, not `'button'`.
+ */
+
 const WHITE = combineRgb(255, 255, 255);
 const BLACK = combineRgb(0, 0, 0);
 const DARK = combineRgb(20, 20, 22);
@@ -9,14 +19,20 @@ const GREEN = combineRgb(60, 160, 90);
 
 export default function UpdatePresets(self) {
   const presets = {};
+  const sections = [];
+
+  // Variable references are resolved against the CONNECTION's label, which the
+  // user can rename, not against the module id. Hardcoding `$(kestrel:...)`
+  // renders as literal text on every install that is not named "kestrel" —
+  // including the default, which Companion derives from the product name.
+  const v = (id) => `$(${self.label}:${id})`;
 
   // --- the kill, first, because it is the one button that matters ---------
   presets.outputs_kill = {
-    type: "button",
-    category: "Global",
+    type: "simple",
     name: "Outputs on / off",
     style: {
-      text: "OUTPUTS\\n$(kestrel:outputs_enabled)",
+      text: `OUTPUTS\n${v("outputs_enabled")}`,
       size: "14",
       color: WHITE,
       bgcolor: RED,
@@ -37,11 +53,10 @@ export default function UpdatePresets(self) {
   };
 
   presets.input_tally = {
-    type: "button",
-    category: "Global",
+    type: "simple",
     name: "Input lock tally",
     style: {
-      text: "INPUT\\n$(kestrel:input_size)",
+      text: `INPUT\n${v("input_size")}`,
       size: "14",
       color: WHITE,
       bgcolor: RED,
@@ -58,6 +73,14 @@ export default function UpdatePresets(self) {
     ],
   };
 
+  sections.push({
+    id: "global",
+    name: "Global",
+    description:
+      "The whole-device controls. The kill cuts every output at once — it is the only button here that reaches air.",
+    definitions: ["outputs_kill", "input_tally"],
+  });
+
   // --- one crosspoint button per region x output --------------------------
   //
   // Capped, because a machine with eight outputs and a dozen regions produces
@@ -65,16 +88,21 @@ export default function UpdatePresets(self) {
   // big rig can raise it deliberately.
   const limit = Number(self.config?.presetlimit ?? 200);
   let made = 0;
+  const groups = [];
+
   for (const o of self.state.outputs) {
+    const oid = safeId(o.id);
+    const members = [];
+
     for (const r of self.state.rois) {
       if (made >= limit) break;
       made += 1;
-      presets[`xpt_${safeId(o.id)}_${safeId(r.id)}`] = {
-        type: "button",
-        category: `Take to ${o.label}`,
+      const id = `xpt_${oid}_${safeId(r.id)}`;
+      presets[id] = {
+        type: "simple",
         name: `${r.name} → ${o.label}`,
         style: {
-          text: `${r.name}\\n$(kestrel:out_${safeId(o.id)}_scale)`,
+          text: `${r.name}\n${v(`out_${oid}_scale`)}`,
           size: "14",
           color: WHITE,
           bgcolor: DARK,
@@ -98,17 +126,15 @@ export default function UpdatePresets(self) {
           },
         ],
       };
+      members.push(id);
     }
-  }
 
-  // --- per-output utilities ----------------------------------------------
-  for (const o of self.state.outputs) {
-    presets[`clear_${safeId(o.id)}`] = {
-      type: "button",
-      category: `Take to ${o.label}`,
+    // --- per-output utilities --------------------------------------------
+    presets[`clear_${oid}`] = {
+      type: "simple",
       name: `Clear ${o.label}`,
       style: {
-        text: `CLEAR\\n${o.label}`,
+        text: `CLEAR\n${o.label}`,
         size: "14",
         color: WHITE,
         bgcolor: DARK,
@@ -121,12 +147,13 @@ export default function UpdatePresets(self) {
       ],
       feedbacks: [],
     };
-    presets[`cycle_${safeId(o.id)}`] = {
-      type: "button",
-      category: `Take to ${o.label}`,
+    members.push(`clear_${oid}`);
+
+    presets[`cycle_${oid}`] = {
+      type: "simple",
       name: `Cycle region on ${o.label}`,
       style: {
-        text: `${o.label}\\n$(kestrel:out_${safeId(o.id)}_roi)`,
+        text: `${o.label}\n${v(`out_${oid}_roi`)}`,
         size: "14",
         color: WHITE,
         bgcolor: DARK,
@@ -150,7 +177,25 @@ export default function UpdatePresets(self) {
         },
       ],
     };
+    members.push(`cycle_${oid}`);
+
+    groups.push({
+      id: `output_${oid}`,
+      type: "simple",
+      name: `Take to ${o.label}`,
+      presets: members,
+    });
   }
 
-  self.setPresetDefinitions(presets);
+  if (groups.length) {
+    sections.push({
+      id: "outputs",
+      name: "Outputs",
+      description:
+        "One crosspoint per region per output, grouped by output, with a clear and a region cycle for each. Routing a region to an output does not take it to air on its own.",
+      definitions: groups,
+    });
+  }
+
+  self.setPresetDefinitions(sections, presets);
 }

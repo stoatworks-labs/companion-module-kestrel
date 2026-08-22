@@ -37,13 +37,46 @@ class and `UpgradeScripts` and let Companion import them. Calling it fails at
 import time with a bare `SyntaxError` naming the export rather than the version,
 which sends the hunt the wrong way.
 
+**Base 2.x definition shapes — all four of these ship silently.** v1.0.0 was
+published with the first three live and its test suite green throughout, because
+the fixture was more permissive than the real host. It could not be installed at
+all.
+
+- **Variable definitions are an OBJECT keyed by id**, not the 1.x array of
+  `{ variableId, name }`. `setVariableDefinitions` _throws_ on an array, which
+  fails `init()` and leaves a dead connection with no actions, no variables and
+  no presets. `rebuild()` defines variables before presets, so it takes the
+  preset library down with it.
+- **`setPresetDefinitions` takes TWO arguments** — an array of sections, then a
+  flat object of definitions keyed by id. Grouping comes from the structure. A
+  1.x `category` field on a definition still loads and the presets simply never
+  appear, which reads as a rendering bug rather than a mistake. `type` is
+  `'simple'`, not `'button'`.
+- **Variable references resolve against the CONNECTION's label**, which the user
+  can rename — not against the module id. A hardcoded `$(kestrel:…)` renders as
+  literal text on every install not named `kestrel`. Build them from
+  `self.label`.
+- **`checkFeedbacks()` bare checks nothing.** It takes one or more feedback
+  _types_ and forwards them as a filter, so calling it with no arguments sends
+  `[undefined]` and matches none. Use `checkAllFeedbacks()`. This one fails
+  silently rather than loudly: the module loads and routes correctly, and every
+  tally on the surface freezes at its last value. Routing changes take
+  `applyState`'s non-membership path, which is the common case on a busy show.
+
+The fixture in `test/smoke.mjs` now mirrors the real host on all four — it
+throws on an array, asserts the two-argument preset call, rejects a bare
+`checkFeedbacks`, and checks every preset's variable prefix against
+`self.label`. Keep it strict; a permissive fixture is what let v1.0.0 out.
+
 **`InstanceBase`'s constructor refuses to run outside Companion's host.** The
 tests build an instance with `Object.create(ModuleInstance.prototype)` and
 attach the host methods by hand. The obvious alternatives — subclassing, or a
 plain object with the same shape — test a _copy_ of the logic, and `applyState`,
 `nextRoi` and `command` are exactly the parts worth testing. (The sibling module
 takes the plain-object route; that is the thing to improve there, not to copy
-here.)
+here.) `label` is a getter backed by a private field, so on a prototype-built
+instance it _throws_ rather than returning undefined — the fixture defines it as
+an own property, which shadows the getter.
 
 **Stepping into a cycle from outside it.** `nextRoi` returns `null` for "nothing
 routed", which is a real position, not a failure. When the current position is
@@ -62,9 +95,12 @@ when `outputs_enabled` is false.
 
 ## Verified
 
-- `npm test` — 21 checks against a fake Kestrel: definitions, presets and the
+- `npm test` — 31 checks against a fake Kestrel: definitions, presets and the
   cap, the tally feedbacks, the cycle arithmetic, every command's endpoint and
-  body, and that a 200-with-`ok:false` is treated as a failure.
+  body, that a 200-with-`ok:false` is treated as a failure, and the base-2.x
+  surface above — variable and preset shapes, the label-derived variable prefix,
+  and that every preset's actions, feedbacks and variable references resolve to
+  something that exists.
 - `node test/live.mjs <host:port>` — 8 checks against a **really running
   Kestrel**: the WebSocket feed, that every field this module reads is actually
   present, a real take landing, the scale variable, the global kill muting

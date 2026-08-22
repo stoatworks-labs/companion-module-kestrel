@@ -136,17 +136,54 @@ function FakeInstance() {
   };
   self.actions = {};
   self.feedbacks = {};
-  self.variableDefs = [];
+  self.variableDefs = {};
   self.variableValues = {};
   self.presets = {};
+  self.presetStructure = [];
   self.logs = [];
   self.status = null;
+  // `label` is a getter on InstanceBase backed by a private field, so on a
+  // prototype-built instance it throws rather than returning undefined. It has
+  // to be defined as an own property — which is also the point of the check
+  // below: presets must build their variable references from it.
+  Object.defineProperty(self, "label", {
+    value: "kestrel-1",
+    configurable: true,
+  });
   self.setActionDefinitions = (d) => (self.actions = d);
   self.setFeedbackDefinitions = (d) => (self.feedbacks = d);
-  self.setVariableDefinitions = (d) => (self.variableDefs = d);
+  self.setVariableDefinitions = (d) => {
+    // Mirrors the real implementation, which THROWS on an array. A permissive
+    // fixture here is what let the 1.x array shape ship: init() died on every
+    // install with no actions, no variables and no presets, and this suite
+    // stayed green throughout.
+    if (Array.isArray(d))
+      throw new Error("Variable definitions should be an object, not an array");
+    self.variableDefs = d;
+  };
   self.setVariableValues = (v) => Object.assign(self.variableValues, v);
-  self.setPresetDefinitions = (p) => (self.presets = p);
-  self.checkFeedbacks = () => {};
+  self.setPresetDefinitions = (structure, presets) => {
+    assert.ok(
+      Array.isArray(structure),
+      "preset structure must be the FIRST argument and an array",
+    );
+    assert.ok(
+      presets && !Array.isArray(presets),
+      "preset definitions must be the second argument, an object",
+    );
+    self.presetStructure = structure;
+    self.presets = presets;
+  };
+  self.checkAllFeedbacks = () => (self.checkedAll = true);
+  self.checkFeedbacks = () => {
+    // `checkFeedbacks` takes one or more feedback TYPES and forwards them as a
+    // filter, so a bare call sends `[undefined]` and re-evaluates nothing. It
+    // fails silently: the module loads, routes, and simply never updates a
+    // tally again.
+    throw new Error(
+      "bare checkFeedbacks() checks nothing - use checkAllFeedbacks()",
+    );
+  };
   self.updateStatus = (s, msg) => (self.status = [s, msg]);
   self.log = (level, msg) => self.logs.push([level, msg]);
   return self;
@@ -449,4 +486,210 @@ await new Promise((resolve, reject) => {
 wss.close();
 server.close();
 clearTimeout(watchdog);
+
+// --- the module surface, against base 2.x ---------------------------------
+//
+// The traps below either kill init() outright or fail silently at runtime, and
+// none of them is visible to a protocol test. Re-registered from the current
+// state first, so this reads a consistent snapshot rather than whatever the
+// cycle and live-feed checks above happened to leave behind.
+UpdateActions(self);
+UpdateFeedbacks(self);
+UpdateVariables(self);
+UpdatePresets(self);
+refreshVariableValues(self);
+
+await check(
+  "variable definitions are an object keyed by id, not an array",
+  () => {
+    assert.ok(
+      self.variableDefs && !Array.isArray(self.variableDefs),
+      "base 2.x throws on an array, which kills init()",
+    );
+    for (const [id, d] of Object.entries(self.variableDefs)) {
+      assert.ok(typeof id === "string" && id.length > 0);
+      assert.ok(d.name, `${id} needs a name`);
+      assert.ok(
+        !("variableId" in d),
+        `${id} keeps the 1.x variableId field, which belongs in the key`,
+      );
+    }
+  },
+);
+
+await check("every variable set has a definition, and vice versa", () => {
+  const defined = new Set(Object.keys(self.variableDefs));
+  for (const id of Object.keys(self.variableValues)) {
+    assert.ok(
+      defined.has(id),
+      `${id} is set but never defined, so it renders as raw text`,
+    );
+  }
+  for (const id of defined) {
+    assert.ok(
+      id in self.variableValues,
+      `${id} is defined but never given a value`,
+    );
+  }
+});
+
+await check(
+  "every preset referenced in the structure exists, exactly once",
+  () => {
+    const referenced = [];
+    for (const section of self.presetStructure) {
+      assert.ok(section.id && section.name, "sections need an id and a name");
+      for (const entry of section.definitions) {
+        if (typeof entry === "string") referenced.push(entry);
+        else {
+          assert.equal(entry.type, "simple", "groups must declare their type");
+          assert.ok(entry.id && entry.name, "groups need an id and a name");
+          referenced.push(...entry.presets);
+        }
+      }
+    }
+    for (const id of referenced)
+      assert.ok(
+        self.presets[id],
+        `structure references a missing preset: ${id}`,
+      );
+    assert.equal(
+      referenced.length,
+      Object.keys(self.presets).length,
+      "every preset should be reachable from the structure",
+    );
+    assert.equal(
+      new Set(referenced).size,
+      referenced.length,
+      "a preset is referenced twice",
+    );
+  },
+);
+
+await check("no preset carries a 1.x category field or button type", () => {
+  for (const [id, p] of Object.entries(self.presets)) {
+    assert.ok(
+      !("category" in p),
+      `${id} uses the 1.x category field, which loads but never appears`,
+    );
+    assert.equal(
+      p.type,
+      "simple",
+      `${id} should be type 'simple', not 'button'`,
+    );
+  }
+});
+
+await check(
+  "preset button text uses real newlines, not an escaped backslash-n",
+  () => {
+    for (const [id, p] of Object.entries(self.presets)) {
+      assert.ok(
+        !(p.style?.text ?? "").includes("\\n"),
+        `${id} carries a literal backslash-n, which renders as text`,
+      );
+    }
+  },
+);
+
+await check(
+  "preset variable references use the connection label, not the module id",
+  () => {
+    let checked = 0;
+    for (const [id, p] of Object.entries(self.presets)) {
+      const text = p.style?.text ?? "";
+      if (!text.includes("$(")) continue;
+      checked += 1;
+      for (const ref of text.matchAll(/\$\(([^:)]+):/g)) {
+        assert.equal(
+          ref[1],
+          self.label,
+          `${id} hardcodes a variable prefix: ${text}`,
+        );
+      }
+    }
+    assert.ok(
+      checked > 0,
+      "no preset references a variable — check is vacuous",
+    );
+  },
+);
+
+await check("every preset variable reference names a defined variable", () => {
+  for (const [id, p] of Object.entries(self.presets)) {
+    const text = p.style?.text ?? "";
+    for (const ref of text.matchAll(/\$\([^:)]+:([^)]+)\)/g)) {
+      assert.ok(
+        ref[1] in self.variableDefs,
+        `${id} references undefined variable ${ref[1]}`,
+      );
+    }
+  }
+});
+
+await check(
+  "every preset action names a real action, with options it accepts",
+  () => {
+    for (const [id, p] of Object.entries(self.presets)) {
+      for (const step of p.steps) {
+        for (const a of step.down) {
+          const def = self.actions[a.actionId];
+          assert.ok(def, `${id} references unknown action ${a.actionId}`);
+          const fields = new Set(def.options.map((o) => o.id));
+          for (const key of Object.keys(a.options ?? {}))
+            assert.ok(
+              fields.has(key),
+              `${id} passes option "${key}", which ${a.actionId} does not define`,
+            );
+        }
+      }
+    }
+  },
+);
+
+await check("every preset feedback names a real feedback", () => {
+  for (const [id, p] of Object.entries(self.presets)) {
+    for (const f of p.feedbacks) {
+      assert.ok(
+        self.feedbacks[f.feedbackId],
+        `${id} references unknown feedback ${f.feedbackId}`,
+      );
+    }
+  }
+});
+
+// --- the parseVariablesInString trap ----------------------------------------
+// `parseVariablesInString` and `parseVariablesInField` were removed from
+// @companion-module/base 2.x. Neither is on the callback context, on
+// InstanceBase, or anywhere in the package. Companion expands a `useVariables`
+// option itself before invoking the callback, so the option arrives already
+// resolved: the call is redundant as well as fatal, throwing "... is not a
+// function" the moment that one action or feedback fires. Nothing else catches
+// it — the module loads, init() succeeds, every definition registers, and every
+// path that does not make the call keeps working, so the suite passes with the
+// bug live. This fixture no longer stubs either function, so a reintroduced
+// call now throws here too; the grep is the backstop for a path the fixture
+// never exercises. It matches the call form only, so prose naming the
+// functions stays legal.
+const { readdirSync: pvReadDir, readFileSync: pvReadFile } =
+  await import("node:fs");
+const pvOffenders = () => {
+  const dir = new URL("../src/", import.meta.url).pathname;
+  const bad = [];
+  for (const f of pvReadDir(dir)) {
+    if (!/\.(js|ts)$/.test(f)) continue;
+    if (/parseVariablesIn(String|Field)\s*\(/.test(pvReadFile(dir + f, "utf8")))
+      bad.push(f);
+  }
+  return bad;
+};
+
+await check("no parseVariablesInString/Field call survives in src/", () => {
+  assert.deepEqual(
+    pvOffenders(),
+    [],
+    "read the already-resolved event.options value instead",
+  );
+});
+
 console.log(`\n${passed} checks passed`);

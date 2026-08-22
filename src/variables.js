@@ -1,36 +1,36 @@
 import { safeId } from "./main.js";
 
+// Variable definitions are an OBJECT keyed by variable id in base 2.x, not the
+// 1.x array of `{ variableId, name }`. The real implementation THROWS on an
+// array, which fails init() and leaves a dead connection with no actions and no
+// visible cause — and, because rebuild() defines variables before presets, it
+// also takes the preset library down with it.
 export default function UpdateVariableDefinitions(self) {
-  const defs = [
-    { variableId: "input_live", name: "Input locked (yes/no)" },
-    { variableId: "input_size", name: "Input raster" },
-    { variableId: "input_device", name: "Input device" },
-    { variableId: "output_format", name: "Output format" },
-    { variableId: "outputs_enabled", name: "Outputs on (yes/no)" },
-    { variableId: "roi_count", name: "Number of regions" },
-    { variableId: "output_count", name: "Number of outputs" },
-    { variableId: "decklink", name: "DeckLink status" },
-  ];
+  const defs = {
+    input_live: { name: "Input locked (yes/no)" },
+    input_size: { name: "Input raster" },
+    input_device: { name: "Input device" },
+    output_format: { name: "Output format" },
+    outputs_enabled: { name: "Outputs on (yes/no)" },
+    roi_count: { name: "Number of regions" },
+    output_count: { name: "Number of outputs" },
+    decklink: { name: "DeckLink status" },
+  };
 
   for (const o of self.state.outputs) {
     const id = safeId(o.id);
-    defs.push(
-      { variableId: `out_${id}_label`, name: `Output ${o.label}: name` },
-      { variableId: `out_${id}_roi`, name: `Output ${o.label}: region` },
-      { variableId: `out_${id}_scale`, name: `Output ${o.label}: scale %` },
-      { variableId: `out_${id}_on_air`, name: `Output ${o.label}: on air` },
-      { variableId: `out_${id}_device`, name: `Output ${o.label}: card` },
-    );
+    defs[`out_${id}_label`] = { name: `Output ${o.label}: name` };
+    defs[`out_${id}_roi`] = { name: `Output ${o.label}: region` };
+    defs[`out_${id}_scale`] = { name: `Output ${o.label}: scale %` };
+    defs[`out_${id}_on_air`] = { name: `Output ${o.label}: on air` };
+    defs[`out_${id}_device`] = { name: `Output ${o.label}: card` };
   }
   for (const r of self.state.rois) {
     const id = safeId(r.id);
-    defs.push(
-      { variableId: `roi_${id}_name`, name: `Region ${r.name}: name` },
-      {
-        variableId: `roi_${id}_outputs`,
-        name: `Region ${r.name}: outputs carrying it`,
-      },
-    );
+    defs[`roi_${id}_name`] = { name: `Region ${r.name}: name` };
+    defs[`roi_${id}_outputs`] = {
+      name: `Region ${r.name}: outputs carrying it`,
+    };
   }
 
   self.setVariableDefinitions(defs);
