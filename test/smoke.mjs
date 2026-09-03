@@ -692,4 +692,23 @@ await check("no parseVariablesInString/Field call survives in src/", () => {
   );
 });
 
+// Companion keys an installed module on id + version and discards a reinstall
+// whose pair it already has. If companion/manifest.json lags package.json, every
+// release after the manifest's version is silently refused by any Companion that
+// already has the module — the update appears to work and changes nothing. These
+// two agree today; this keeps them agreeing.
+await check(
+  "companion/manifest.json version matches package.json",
+  async () => {
+    const { readFileSync } = await import("node:fs");
+    const read = (p) =>
+      JSON.parse(readFileSync(new URL(p, import.meta.url).pathname, "utf8"));
+    assert.equal(
+      read("../companion/manifest.json").version,
+      read("../package.json").version,
+      "bump both, or the release never reaches an existing install",
+    );
+  },
+);
+
 console.log(`\n${passed} checks passed`);
