@@ -14,12 +14,12 @@ interest to any DeckLink output from a control surface, with live tally.
 
 ## Download
 
-**[v1.0.1](https://github.com/stoatworks-labs/companion-module-kestrel/releases/tag/v1.0.1)**
+**[v1.0.2](https://github.com/stoatworks-labs/companion-module-kestrel/releases/tag/v1.0.2)**
 
 This release contains:
 
-- [`companion-module-kestrel-pkg.tgz`](https://github.com/stoatworks-labs/companion-module-kestrel/releases/latest/download/companion-module-kestrel-pkg.tgz) — npm package, 23 KB
-- [`kestrel-1.0.1.tgz`](https://github.com/stoatworks-labs/companion-module-kestrel/releases/download/v1.0.1/kestrel-1.0.1.tgz) — npm package, 23 KB
+- [`companion-module-kestrel-pkg.tgz`](https://github.com/stoatworks-labs/companion-module-kestrel/releases/latest/download/companion-module-kestrel-pkg.tgz) — npm package, 24 KB
+- [`kestrel-1.0.2.tgz`](https://github.com/stoatworks-labs/companion-module-kestrel/releases/download/v1.0.2/kestrel-1.0.2.tgz) — npm package, 24 KB
 
 All builds, checksums and release notes: [github.com/stoatworks-labs/companion-module-kestrel/releases](https://github.com/stoatworks-labs/companion-module-kestrel/releases).
 
