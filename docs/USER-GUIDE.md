@@ -1,20 +1,21 @@
 # Companion — Kestrel user guide
 
-This module routes **regions of interest to DeckLink outputs** from a Stream Deck or any other
-Bitfocus Companion surface, through [Kestrel](https://github.com/stoatworks-labs/kestrel) — take
-any region to any output, cycle regions on an output, fire a salvo, kill every output at once,
-with live crosspoint tally.
+This module routes regions of interest to DeckLink outputs from a Stream Deck or any other
+Bitfocus Companion surface, through [Kestrel](https://github.com/stoatworks-labs/kestrel). You can
+take any region to any output, cycle regions on an output, fire a salvo and kill every output at
+once, with live crosspoint tally.
 
-The [README](../README.md) covers installing the module. This is how to build a page with it.
+The [README](../README.md) covers installing the module. This guide is about building a page with
+it.
 
 > **Before you rely on this:** the module's 21 automated checks run against a **fake Kestrel**, so
-> they prove the module's own shape rather than that the two ends agree. Kestrel itself has been
-> verified against real SDI hardware; this module driving it has not been used in a show. The live
-> test against a really-running Kestrel is the one that matters when either side changes.
+> they show the module's own shape is right but not that the two ends agree. Kestrel itself has
+> been verified against real SDI hardware; this module driving it hasn't been used in a show.
+> When either side changes, the live test against a Kestrel that's actually running is the one
+> that matters.
 >
-> **If the connection comes up with no actions, variables or presets at all**, you are on a
-> version that dies during startup — upgrade to the newest release before investigating anything
-> else.
+> **If the connection comes up with no actions, variables or presets at all**, you're on a version
+> that dies during startup. Upgrade to the newest release before you look at anything else.
 >
 > This module was built with AI assistance, directed and reviewed by a human author.
 
@@ -22,76 +23,80 @@ The [README](../README.md) covers installing the module. This is how to build a 
 
 ## Connecting
 
-Kestrel's control API — the address along the bottom of Kestrel's own window, `127.0.0.1:9720` by
+Kestrel's control API: the address along the bottom of Kestrel's own window, `127.0.0.1:9720` by
 default.
 
-> **There is no authentication.** Anyone who can reach that port can re-route every output and
-> kill them all at once. Keep it on a management interface, not on a show network anyone can join.
+> **There's no authentication.** Anyone who can reach that port can re-route every output and
+> kill the lot at once. Keep it on a management interface, not on a show network anyone can join.
 
-**Max crosspoint presets** in the connection config caps how many buttons a large show generates.
+**Max crosspoint presets** in the connection config caps how many buttons a big show generates.
 
 ---
 
 ## The crosspoint
 
-**Take region to output** is the whole idea: one region of the input picture, onto one SDI output.
+**Take region to output** is what this is all about: one region of the input picture, onto one SDI
+output.
 
-The dropdown carries a **— clear —** entry, which drops the crosspoint **without stopping the
-output** — it falls back to its idle fill. That distinction matters on a rig where a downstream
-device is watching for signal: clearing a crosspoint is not the same as killing an output.
+The dropdown has a **— clear —** entry, which drops the crosspoint **without stopping the
+output**, so it falls back to its idle fill. That matters on a rig where something downstream is
+watching for signal, because clearing a crosspoint isn't the same as killing an output.
 
-**Cycle the region on an output** steps forward or back through the regions, and can optionally
-include "nothing routed" in the cycle. It exists for a surface with fewer buttons than the show
-has regions.
+**Cycle the region on an output** steps forward or back through the regions, and can include
+"nothing routed" in the cycle if you want. It's there for a surface with fewer buttons than the
+show has regions.
 
 **Salvo** puts one region on *every* output at once. **Outputs on / off** is the global kill.
 
-**Set an output's idle fill** chooses black, bars, or the full input for when nothing is routed —
-bars being the one to pick when somebody downstream needs to see that the path is alive.
+**Set an output's idle fill** picks black, bars or the full input for when nothing's routed. Bars
+is the one to go for when somebody downstream needs to see that the path is alive.
 
 ---
 
 ## Tally, and the two feedbacks that differ
 
 **Crosspoint is taken** colours the button **in the region's own colour, taken from Kestrel**, so
-the surface matches the operator's screen without anyone maintaining a second colour scheme.
+the surface matches the operator's screen and nobody has to keep a second colour scheme up to
+date.
 
-It **dims rather than clears** when the outputs are killed: the routing is still what it was, it
-is simply not going anywhere. That is information you want during a kill, not a blank page.
+It **dims rather than clears** when the outputs are killed. The routing's still what it was, it
+just isn't going anywhere, and that's worth knowing during a kill rather than staring at a blank
+page.
 
-**Output is carrying a region** is the stricter one — true only when that output is *really on
-air*. Muted, unrouted, or the input gone, and it is false.
+**Output is carrying a region** is the stricter one: it's only true when that output is *properly
+on air*. If it's muted, unrouted or the input's gone, it's false.
 
-**Input is locked deserves a button of its own.** When it is false, **every routed output is
-carrying black**, and nothing else on the surface will tell you that.
+**Input is locked deserves a button of its own.** When it's false, **every routed output is
+carrying black**, and nothing else on the surface will tell you so.
 
-**Output is scaling too far** warns above a threshold you set — the quiet quality failure, where
-everything is routed correctly and a region is being blown up past what it can stand.
+**Output is scaling too far** warns you above a threshold you set. It's the failure that doesn't
+announce itself: everything's routed correctly and a region is being blown up further than it can
+take.
 
 ---
 
 ## Two things that will not do what you expect
 
-**Nudging a region is safe to hold down.** Kestrel clamps at the frame edge rather than refusing
-the command, so a held button walks the region to the edge and stops there.
+**It's safe to hold down a nudge button.** Kestrel clamps at the edge of the frame rather than
+refusing the command, so a held button walks the region to the edge and stops there.
 
-**Killing the transmitter does not remove the signal.** A DeckLink output goes on sending locked
-black long after the process that opened it has exited — measured twenty seconds after the fact, a
-looped-back input still reported a good, locked 1080p50 signal.
+**Killing the transmitter doesn't remove the signal.** A DeckLink output carries on sending locked
+black long after the process that opened it has exited. Measured twenty seconds after the fact, a
+looped-back input still reported a good, locked 1080p50 signal. (Nobody told the card.)
 
-So **"outputs off" is not a way to prove to a downstream device that the source has gone.** Pull
-the cable if that is what you are testing.
+So **"outputs off" is no way to prove to a downstream device that the source has gone.** If that's
+what you're testing, pull the cable.
 
 ---
 
 ## Building a surface that fails safe
 
-1. **Input is locked**, prominent. It is the single failure that makes every other light on the
+1. **Input is locked**, big and obvious. It's the one failure that makes every other light on the
    page a lie.
 2. **Crosspoint tally in Kestrel's own region colours**, so the surface and the screen agree.
 3. **Output-is-carrying** on anything that reads as "on air", rather than the crosspoint tally.
-4. **Scaling-too-far with a real threshold**, set from what the show's outputs can stand.
-5. **The global kill somewhere deliberate** — it is one press with no confirmation.
+4. **Scaling-too-far with a sensible threshold**, set from what the show's outputs can take.
+5. **The global kill somewhere you have to mean to reach.** It's one press with no confirmation.
 
 ---
 
@@ -110,5 +115,5 @@ the cable if that is what you are testing.
 
 ## See also
 
-- [README](../README.md) — installing, and the full action/feedback/variable list
-- [`companion/HELP.md`](../companion/HELP.md) — the same material, in Companion's help panel
+- [README](../README.md): installing, and the full list of actions, feedbacks and variables
+- [`companion/HELP.md`](../companion/HELP.md): the same material, in Companion's help panel
