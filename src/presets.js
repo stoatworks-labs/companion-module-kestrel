@@ -83,9 +83,12 @@ export default function UpdatePresets(self) {
 
   // --- one crosspoint button per region x output --------------------------
   //
-  // Capped, because a machine with eight outputs and a dozen regions produces
-  // ninety-six presets and an unusable list. The cap is a config field so a
-  // big rig can raise it deliberately.
+  // Capped, because the list grows as outputs x regions and Kestrel puts no
+  // limit on regions: eight outputs and a dozen regions is already ninety-six
+  // presets. The default is 200, and the cap is a config field so a big rig can
+  // raise it deliberately. Only crosspoints count towards it; once it is hit,
+  // the remaining outputs get no crosspoints but still get the clear and cycle
+  // buttons below.
   const limit = Number(self.config?.presetlimit ?? 200);
   let made = 0;
   const groups = [];

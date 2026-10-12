@@ -8,7 +8,7 @@ once, with live crosspoint tally.
 The [README](../README.md) covers installing the module. This guide is about building a page with
 it.
 
-> **Before you rely on this:** the module's 21 automated checks run against a **fake Kestrel**, so
+> **Before you rely on this:** the module's 32 automated checks run against a **fake Kestrel**, so
 > they show the module's own shape is right but not that the two ends agree. Kestrel itself has
 > been verified against real SDI hardware; this module driving it hasn't been used in a show.
 > When either side changes, the live test against a Kestrel that's actually running is the one
@@ -29,7 +29,8 @@ default.
 > **There's no authentication.** Anyone who can reach that port can re-route every output and
 > kill the lot at once. Keep it on a management interface, not on a show network anyone can join.
 
-**Max crosspoint presets** in the connection config caps how many buttons a big show generates.
+**Max crosspoint presets** in the connection config caps how many crosspoint buttons a big show
+generates, 200 by default. The clear, cycle, kill and tally buttons don't count towards it.
 
 ---
 

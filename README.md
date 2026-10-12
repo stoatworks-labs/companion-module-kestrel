@@ -1,7 +1,7 @@
 # companion-module-kestrel
 
 > **AI-assisted project.** This codebase was created with [Claude](https://claude.com/claude-code)
-> (Anthropic), directed and reviewed by a human author. Its 21 automated checks
+> (Anthropic), directed and reviewed by a human author. Its 32 automated checks
 > run against a fake Kestrel, so they show the module's own shape is right but
 > not that the two ends agree. When either side changes, the live test against a
 > Kestrel that's actually running is the one that matters.
@@ -71,13 +71,18 @@ being made up. It's empty for an unrouted output rather than `0%`.
 
 There's a crosspoint button per region per output, grouped by output, plus a
 clear and a cycle button for each, and then the global kill and an input-lock
-tally. The crosspoint list is capped (200 by default), because eight outputs and
-a dozen regions is already ninety-six buttons.
+tally. The crosspoints are the part that grows, one per region per output: eight
+outputs and a dozen regions is already ninety-six, and Kestrel lets you draw as
+many regions as you like. So they're capped at 200 by default, and **Max
+crosspoint presets** in the connection config sets the cap anywhere up to 2,000.
+Only crosspoints count towards it. They're made an output at a time, so once the
+cap is reached the remaining outputs get their clear and cycle buttons and no
+crosspoints.
 
 ## Tests
 
 ```bash
-npm test                          # against a fake Kestrel: 21 checks
+npm test                          # against a fake Kestrel: 32 checks
 node test/live.mjs 127.0.0.1:9720 # against a really running one, or skips
 ```
 
