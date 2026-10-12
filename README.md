@@ -25,6 +25,14 @@ All builds, checksums and release notes: [github.com/stoatworks-labs/companion-m
 
 <!-- downloads:end -->
 
+## Installing
+
+It's not in the official Companion module store. Download
+`companion-module-kestrel-pkg.tgz` from the
+[releases page](https://github.com/stoatworks-labs/companion-module-kestrel/releases) and
+import it with Companion's **Modules → Import module package**. Or clone this repo, run
+`npm install`, and point **Settings → Developer modules path** at the folder that contains it.
+
 ## Setup
 
 Point it at Kestrel's control API, which is the address along the bottom of
