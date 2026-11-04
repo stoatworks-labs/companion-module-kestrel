@@ -125,7 +125,7 @@ wss.on("connection", (ws) => ws.send(JSON.stringify(state)));
 // exactly the parts worth testing.
 function FakeInstance() {
   const self = Object.create(ModuleInstance.prototype);
-  self.config = { host: "127.0.0.1", port: String(port), presetlimit: 200 };
+  self.config = { host: "127.0.0.1", port, presetlimit: 200 };
   self.state = {
     rois: [],
     outputs: [],
@@ -483,6 +483,30 @@ await new Promise((resolve, reject) => {
   api.socket.connect(probe);
 });
 
+// The host field takes any text now, so an IPv6 address has to reach the API
+// with its brackets added. Serve the same fake Kestrel on ::1 and post through it.
+await check("an IPv6 host reaches the API", async () => {
+  assert.equal(
+    api.hostPort({ config: { host: " studio.local ", port: 1 } }),
+    "studio.local:1",
+  );
+  assert.equal(api.hostPort({ config: { host: "[::1]", port: 1 } }), "[::1]:1");
+  const v6 = http.createServer(server.listeners("request")[0]);
+  await new Promise((r) => v6.listen(0, "::1", r));
+  try {
+    const port = v6.address().port;
+    const v6Self = { ...self, config: { ...self.config, host: "::1", port } };
+    assert.equal(api.hostPort(v6Self), `[::1]:${port}`);
+    const before = calls.length;
+    await api.setOutputsEnabled(v6Self, true);
+    assert.deepEqual(calls.slice(before), [
+      { path: "/api/output/enable", body: { enabled: true } },
+    ]);
+  } finally {
+    v6.close();
+  }
+});
+
 wss.close();
 server.close();
 clearTimeout(watchdog);
@@ -708,6 +732,61 @@ await check(
       read("../package.json").version,
       "bump both, or the release never reaches an existing install",
     );
+  },
+);
+
+// @companion-module/base 2.2.2 turned Regex into a proxy that logs a
+// deprecation warning for IP, HOSTNAME, PORT and the rest. The config now uses
+// plain text and number fields, and an upgrade script turns the port that
+// older saved configs hold as a string into a number.
+console.log("\n== config fields ==");
+await check(
+  "config fields: plain host text, number port, no regex",
+  async () => {
+    const ModuleInstance = (await import(`${MOD}main.js`)).default;
+    const fields = ModuleInstance.prototype.getConfigFields.call({});
+    const byId = Object.fromEntries(fields.map((f) => [f.id, f]));
+    assert.equal(byId.host.type, "textinput");
+    assert.equal(byId.port.type, "number");
+    assert.ok(Number.isInteger(byId.port.default), "port default is a number");
+    assert.deepEqual(
+      fields.filter((f) => "regex" in f).map((f) => f.id),
+      [],
+    );
+  },
+);
+
+// It matches the import, so comments naming the old constants stay legal.
+await check("no file in src/ imports Regex", async () => {
+  const { readdirSync, readFileSync } = await import("node:fs");
+  const dir = new URL("../src/", import.meta.url).pathname;
+  const offenders = readdirSync(dir).filter(
+    (f) =>
+      /\.(js|ts)$/.test(f) &&
+      /import\s*{[^}]*\bRegex\b[^}]*}\s*from\s*["']@companion-module\/base/.test(
+        readFileSync(dir + f, "utf8"),
+      ),
+  );
+  assert.deepEqual(offenders, [], "use a number or plain textinput field");
+});
+
+await check(
+  "upgrade script turns a saved string port into a number",
+  async () => {
+    const { portsToNumbers } = await import(`${MOD}upgrades.js`);
+    const run = (config) =>
+      portsToNumbers({}, { config, actions: [], feedbacks: [] }).updatedConfig;
+    assert.deepEqual(run({ host: "10.0.0.5", port: " 9721 " }), {
+      host: "10.0.0.5",
+      port: 9721,
+    });
+    assert.deepEqual(
+      run({ host: "h", port: "0" }),
+      { host: "h", port: 9720 },
+      "anything that is not a port falls back to the default",
+    );
+    assert.equal(run({ host: "h", port: 9720 }), null);
+    assert.equal(run(null), null);
   },
 );
 

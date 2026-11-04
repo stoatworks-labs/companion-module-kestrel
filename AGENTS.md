@@ -95,7 +95,7 @@ when `outputs_enabled` is false.
 
 ## Verified
 
-- `npm test` — 31 checks against a fake Kestrel: definitions, presets and the
+- `npm test` — 36 checks against a fake Kestrel: definitions, presets and the
   cap, the tally feedbacks, the cycle arithmetic, every command's endpoint and
   body, that a 200-with-`ok:false` is treated as a failure, and the base-2.x
   surface above — variable and preset shapes, the label-derived variable prefix,

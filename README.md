@@ -92,7 +92,7 @@ crosspoints.
 ## Tests
 
 ```bash
-npm test                          # against a fake Kestrel: 32 checks
+npm test                          # against a fake Kestrel: 36 checks
 node test/live.mjs 127.0.0.1:9720 # against a really running one, or skips
 ```
 
